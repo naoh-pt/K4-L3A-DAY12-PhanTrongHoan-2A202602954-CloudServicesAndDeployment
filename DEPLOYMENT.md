@@ -29,9 +29,9 @@ Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
 | Biến | Đã set | Ghi chú |
 |------|--------|---------|
 | `PORT` | Service đã nhận request | Render quản lý cổng; chưa đọc dashboard để xác nhận giá trị |
-| `AGENT_API_KEY` | Auth trả 401 khi thiếu khóa | Secret trong dashboard; chưa kiểm tra request có khóa thật |
+| `AGENT_API_KEY` | Đã kiểm tra | Thiếu khóa trả 401; khóa đúng trả 200 có câu trả lời |
 | `REDIS_URL` | Kết nối Redis thành công | `/ready` trả 200; Blueprint tham chiếu day12-redis |
-| `RATE_LIMIT_PER_MINUTE` | Khai báo trong render.yaml | 10; chưa kiểm tra quota trên cloud |
+| `RATE_LIMIT_PER_MINUTE` | Đã kiểm tra trên cloud | 10 request đầu trả 200; request thứ 11 trong 60 giây trả 429 |
 | `MONTHLY_BUDGET_USD` | Khai báo trong render.yaml | 10.0 |
 | `LOG_LEVEL` | Khai báo trong render.yaml | INFO |
 
@@ -79,6 +79,12 @@ GET /ready → 200
 {"status":"ready","redis":true}
 POST /ask không có API key → 401
 {"detail":"invalid or missing API key"}
+POST /ask có API key đúng → 200, có câu trả lời, history_length=0 ở lượt đầu
+11 request liên tiếp với cùng X-User-Id:
+[200, 200, 200, 200, 200, 200, 200, 200, 200, 200, 429]
+Retry-After: 60
+pytest tests/test_cp5.py -v → 9 passed, 4 skipped
+4 test bị bỏ qua thuộc phương án local fallback, không dùng cho bản Render.
 ```
 
 ## Ảnh Chụp Màn Hình
@@ -94,4 +100,4 @@ POST /ask không có API key → 401
 
 ## Trạng Thái Bài Nộp
 
-Đã deploy lên Render, không dùng phương án dự phòng; đủ hai ảnh minh chứng. Chưa kiểm tra `/ask` có API key và rate limit trên cloud.
+Đã deploy lên Render, không dùng phương án dự phòng; đủ hai ảnh minh chứng. Đã kiểm tra `/ask` có API key và rate limit trên cloud thành công.
