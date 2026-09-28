@@ -1,37 +1,42 @@
-# CP5 — Deploy trên Railway
+﻿# CP5 — Deploy trên Render
 
-## Chuẩn bị
-
-Push cấu hình mới trước khi tạo service:
+## Push cấu hình
 
 ```powershell
-git add railway.toml DEPLOYMENT.md CP5_SETUP.md
-git commit -m "CP5: chuẩn bị cấu hình cloud deployment"
+git add render.yaml railway.toml DEPLOYMENT.md CP5_SETUP.md
+git commit -m "CP5: chuyển cấu hình deploy sang Render"
 git push origin main
 ```
 
-Không upload `.env`. Chỉ nhập secret trong dashboard của nền tảng.
+`railway.toml` đã được xóa; `git add` ghi nhận việc xóa file đó.
 
-## Railway
+## Tạo Blueprint
 
-1. Đăng nhập https://railway.com, tạo project từ GitHub repo của bài, branch `main`.
-2. Thêm Redis vào cùng project.
-3. Trong Variables của agent, đặt `AGENT_API_KEY` bằng khóa trong `.env` local (hoặc khóa riêng cho cloud). Thêm reference variable `REDIS_URL` trỏ đến `REDIS_URL` của service Redis; nếu service có tên `Redis`, giá trị tham chiếu là `${{Redis.REDIS_URL}}`. Thêm `RATE_LIMIT_PER_MINUTE=10`, `MONTHLY_BUDGET_USD=10.0`, `LOG_LEVEL=INFO`.
-4. Giữ lệnh khởi động mặc định từ Dockerfile, không nhập `$PORT` dưới dạng exec command riêng.
-5. Generate Domain trong Networking để lấy URL HTTPS. Kiểm tra kế hoạch và chi phí hiển thị trước khi tạo tài nguyên.
+1. Đăng nhập https://dashboard.render.com và kết nối GitHub.
+2. Chọn **New > Blueprint**, chọn repo của bài và branch `main`.
+3. Render đọc `render.yaml`, tạo web service `day12-agent` và Key Value `day12-redis` cùng vùng Singapore. Kiểm tra cả hai dùng plan Free.
+4. Nhập `AGENT_API_KEY` khi dashboard yêu cầu. Có thể dùng khóa trong `.env` local. Không upload `.env` hoặc đưa khóa vào Git.
+5. `REDIS_URL` được Blueprint gán tự động từ `connectionString` của `day12-redis`; không nhập tên biến, hostname đơn lẻ, `localhost` hay `fake://`.
+6. Chờ deploy hoàn tất, lấy URL HTTPS của web service.
 
-## Hoàn thiện bài nộp
+## Nếu tạo thủ công
 
-1. Mở `<URL>/health` và `<URL>/ready`: cả hai phải trả HTTP 200.
-2. Gửi lại URL công khai để kiểm tra CP5 và điền kết quả thật vào `DEPLOYMENT.md`.
-3. Nếu muốn chạy thêm test có key, tự điền `DEPLOY_API_KEY` trong `.env` local bằng khóa của agent trên cloud; không gửi khóa qua chat. Giữ `LOCAL_FALLBACK=false`.
-4. Chạy:
+1. **New > Key Value**: tên `day12-redis`, vùng Singapore, plan Free.
+2. **New > Web Service**: chọn repo, branch `main`, runtime Docker, Dockerfile `./Dockerfile`, vùng Singapore, plan Free.
+3. Trong Environment của web service, đặt `AGENT_API_KEY`; đặt `REDIS_URL` bằng **Internal Redis URL** của Key Value. URL phải bắt đầu bằng `redis://` hoặc `rediss://`; không đưa URL chứa mật khẩu vào repo/chat.
+4. Thêm `RATE_LIMIT_PER_MINUTE=10`, `MONTHLY_BUDGET_USD=10.0`, `LOG_LEVEL=INFO`.
+5. Đặt Health Check Path là `/health`, giữ Docker Command mặc định từ Dockerfile.
 
-```powershell
-.\.venv\Scripts\python.exe -m pytest tests/test_cp5.py -v
-```
+## Hoàn thiện CP5
 
-5. Chụp dashboard và kết quả `/health`, lưu lần lượt vào `screenshots/dashboard.png` và `screenshots/health.png`; che secret nếu đang hiển thị.
-6. Ghi platform, ngày deploy, URL, nguồn Redis và output thật trong `DEPLOYMENT.md`. Không đánh dấu biến môi trường đã set trước khi thực hiện.
+- Mở `<URL>/health` và `<URL>/ready`: cả hai phải trả HTTP 200.
+- Gửi URL công khai để kiểm tra và điền kết quả thật vào `DEPLOYMENT.md`.
+- Tự điền `DEPLOY_API_KEY` vào `.env` local bằng khóa của service Render nếu muốn chạy test có xác thực. Giữ `LOCAL_FALLBACK=false`.
+- Chạy `.\.venv\Scripts\python.exe -m pytest tests/test_cp5.py -v`.
+- Chụp ảnh dashboard và `/health`, lưu vào `screenshots/dashboard.png` và `screenshots/health.png`; che secret nếu hiển thị.
 
-Tài liệu chính thức: https://docs.railway.com/config-as-code/reference.
+## Xóa bản Railway cũ
+
+Thay đổi repo không xóa tài nguyên Railway. Trong project Railway của bài, mở Settings của từng service `day12-agent` và Redis, chọn Delete Service và xác nhận. Redis bị xóa sẽ mất dữ liệu hội thoại và chi phí trên bản Railway đó. Nếu project chỉ chứa bài lab này, có thể xóa cả project từ Project Settings. Không xóa tài nguyên của ứng dụng khác.
+
+Tài liệu: https://render.com/docs/blueprint-spec và https://render.com/docs/key-value.
