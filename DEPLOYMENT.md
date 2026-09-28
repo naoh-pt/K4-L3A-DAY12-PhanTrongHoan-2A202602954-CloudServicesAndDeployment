@@ -18,9 +18,9 @@
 
 | Mục | Nội dung |
 |-----|----------|
-| Public URL | Chưa deploy lên Render |
+| Public URL | https://day12-agent-mrev.onrender.com |
 | Platform | Render |
-| Ngày deploy | (điền ngày) |
+| Ngày deploy | 28/09/2026 — ngày xác nhận service hoạt động |
 
 ## Biến Môi Trường Đã Set Trên Cloud
 
@@ -28,12 +28,12 @@ Ghi tên biến và **nguồn giá trị**, không ghi giá trị:
 
 | Biến | Đã set | Ghi chú |
 |------|--------|---------|
-| `PORT` | Chờ deploy | Render tự gán |
-| `AGENT_API_KEY` | Chờ deploy | Nhập trong dashboard, không nằm trong repo |
-| `REDIS_URL` | Chờ deploy | Blueprint lấy connectionString từ day12-redis |
-| `RATE_LIMIT_PER_MINUTE` | Chờ deploy | 10 |
-| `MONTHLY_BUDGET_USD` | Chờ deploy | 10.0 |
-| `LOG_LEVEL` | Chờ deploy | INFO |
+| `PORT` | Service đã nhận request | Render quản lý cổng; chưa đọc dashboard để xác nhận giá trị |
+| `AGENT_API_KEY` | Auth trả 401 khi thiếu khóa | Secret trong dashboard; chưa kiểm tra request có khóa thật |
+| `REDIS_URL` | Kết nối Redis thành công | `/ready` trả 200; Blueprint tham chiếu day12-redis |
+| `RATE_LIMIT_PER_MINUTE` | Khai báo trong render.yaml | 10; chưa kiểm tra quota trên cloud |
+| `MONTHLY_BUDGET_USD` | Khai báo trong render.yaml | 10.0 |
+| `LOG_LEVEL` | Khai báo trong render.yaml | INFO |
 
 ## Lệnh Kiểm Tra
 
@@ -70,10 +70,15 @@ done; echo
 
 ## Kết Quả Chạy Thật
 
-Dán output của các lệnh trên vào đây:
+Kết quả HTTP kiểm tra ngày 28/09/2026:
 
 ```
-(điền output)
+GET /health → 200
+{"status":"ok","service":"day12-agent","version":"1.0.0"}
+GET /ready → 200
+{"status":"ready","redis":true}
+POST /ask không có API key → 401
+{"detail":"invalid or missing API key"}
 ```
 
 ## Ảnh Chụp Màn Hình
@@ -83,19 +88,10 @@ Dán output của các lệnh trên vào đây:
 - `screenshots/dashboard.png` — trang quản lý service trên platform
 - `screenshots/health.png` — kết quả gọi `/health` từ trình duyệt hoặc curl
 
+Đã kiểm tra hai ảnh: dashboard hiển thị `Deploy succeeded | Live` ngày 28/09/2026; ảnh health hiển thị đúng domain Render và JSON trạng thái `ok`. Không thấy API key hoặc mật khẩu trong hai ảnh.
+
 ---
 
-## Nếu Dùng Phương Án Dự Phòng
+## Trạng Thái Bài Nộp
 
-Không đăng ký được tài khoản cloud? Vẫn nộp được bài, nhưng CP5 tối đa 60% điểm:
-
-1. Đặt `LOCAL_FALLBACK=true` trong `.env`
-2. Chạy `docker compose up -d` rồi kiểm tra `docker compose ps`
-3. Chụp màn hình vào `screenshots/`
-4. Chạy `pytest tests/test_cp5.py -v` — bộ test sẽ tự chuyển sang kiểm tra
-   `http://localhost:8000`
-5. Ghi rõ lý do không deploy được vào phần dưới đây:
-
-```
-(điền lý do nếu dùng phương án dự phòng, ngược lại xóa mục này)
-```
+Đã deploy lên Render, không dùng phương án dự phòng; đủ hai ảnh minh chứng. Chưa kiểm tra `/ask` có API key và rate limit trên cloud.
